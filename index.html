@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Date Comparison Methods Demo</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide-react@0.544.0/dist/umd/lucide-react.min.js"></script>
+    <style>
+        body {
+          // Helper functions  margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+                sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        // const { Calendar, ArrowRight, Info } = lucideReact;
+
+        const DateComparisonDemo = () => {
+          const [selectedDate, setSelectedDate] = useState(new Date());
+          // Simple icon components to replace Lucide icons
+          const Calendar = () => React.createElement('svg', { 
+            className: "text-blue-600", 
+            width: 32, 
+            height: 32, 
+            viewBox: "0 0 24 24", 
+            fill: "none", 
+            stroke: "currentColor", 
+            strokeWidth: 2 
+          },
+            React.createElement('rect', { x: 3, y: 4, width: 18, height: 18, rx: 2, ry: 2 }),
+            React.createElement('line', { x1: 16, y1: 2, x2: 16, y2: 6 }),
+            React.createElement('line', { x1: 8, y1: 2, x2: 8, y2: 6 }),
+            React.createElement('line', { x1: 3, y1: 10, x2: 21, y2: 10 })
+          );
+
+          const Info = () => React.createElement('svg', { 
+            className: "text-blue-600 mt-1", 
+            width: 20, 
+            height: 20, 
+            viewBox: "0 0 24 24", 
+            fill: "none", 
+            stroke: "currentColor", 
+            strokeWidth: 2 
+          },
+            React.createElement('circle', { cx: 12, cy: 12, r: 10 }),
+            React.createElement('line', { x1: 12, y1: 16, x2: 12, y2: 12 }),
+            React.createElement('line', { x1: 12, y1: 8, x2: 12.01, y2: 8 })
+          );
+          const formatDate = (date) => {
+            return date.toLocaleDateString('en-US', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            });
+          };
+
+          const getWeekNumber = (date) => {
+            const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+            const pastDaysOfYear = (date - firstDayOfYear) / 86400000;
+            return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+          };
+
+          const getNthWeekdayOfMonth = (date) => {
+            const year = date.getFullYear();
+            const month = date.getMonth();
+            const day = date.getDate();
+            const weekday = date.getDay();
+            
+            let count = 0;
+            // Count occurrences of this weekday from the 1st of the month up to this date
+            for (let d = 1; d <= day; d++) {
+              const testDate = new Date(year, month, d);
+              if (testDate.getDay() === weekday) {
+                count++;
+                if (d === day) {
+                  return count;
+                }
+              }
+            }
+            return count;
+          };
+
+          const getNthWeekdayOfYear = (date) => {
+            const year = date.getFullYear();
+            const weekday = date.getDay();
+            let count = 0;
+            
+            // Start from January 1st and count up to the target date
+            const startOfYear = new Date(year, 0, 1);
+            const targetDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+            
+            for (let d = new Date(startOfYear); d <= targetDate; d.setDate(d.getDate() + 1)) {
+              if (d.getDay() === weekday) {
+                count++;
+                // Check if this is our target date
+                if (d.getFullYear() === targetDate.getFullYear() && 
+                    d.getMonth() === targetDate.getMonth() && 
+                    d.getDate() === targetDate.getDate()) {
+                  return count;
+                }
+              }
+            }
+            return count;
+          };
+
+          const calculateComparisons = (currentDate) => {
+            const lastYear = currentDate.getFullYear() - 1;
+            const currentWeekday = currentDate.getDay();
+            
+            // Method 1: Same nth weekday of year
+            const nthWeekdayOfYear = getNthWeekdayOfYear(currentDate);
+            let method1Date = null;
+            
+            // Count all occurrences of this weekday in last year
+            const allWeekdaysLastYear = [];
+            for (let month = 0; month < 12; month++) {
+              const daysInMonth = new Date(lastYear, month + 1, 0).getDate();
+              for (let day = 1; day <= daysInMonth; day++) {
+                const testDate = new Date(lastYear, month, day);
+                if (testDate.getDay() === currentWeekday) {
+                  allWeekdaysLastYear.push(testDate);
+                }
+              }
+            }
+            
+            // If we have enough occurrences, use the nth one
+            // Otherwise, use the last occurrence available
+            if (allWeekdaysLastYear.length >= nthWeekdayOfYear) {
+              method1Date = allWeekdaysLastYear[nthWeekdayOfYear - 1];
+            } else {
+              method1Date = allWeekdaysLastYear[allWeekdaysLastYear.length - 1];
+            }
+
+            // Method 2: Same weekday of same nth week of year
+            const weekNumber = getWeekNumber(currentDate);
+            const jan1LastYear = new Date(lastYear, 0, 1);
+            const daysToAdd = (weekNumber - 1) * 7 + (currentWeekday - jan1LastYear.getDay() + 7) % 7;
+            const method2Date = new Date(lastYear, 0, 1 + daysToAdd);
+
+            // Method 3: Same nth weekday of same month last year
+            const nthWeekdayOfMonth = getNthWeekdayOfMonth(currentDate);
+            let method3Date = null;
+            const month = currentDate.getMonth();
+            let monthWeekdayCount = 0;
+            
+            const daysInMonth = new Date(lastYear, month + 1, 0).getDate();
+            for (let day = 1; day <= daysInMonth; day++) {
+              const testDate = new Date(lastYear, month, day);
+              if (testDate.getDay() === currentWeekday) {
+                monthWeekdayCount++;
+                if (monthWeekdayCount === nthWeekdayOfMonth) {
+                  method3Date = testDate;
+                  break;
+                }
+              }
+            }
+            
+            // Don't fall back - if the nth occurrence doesn't exist, leave it null
+
+            // Method 4: Same weekday, closest date
+            const sameCalendarDate = new Date(lastYear, currentDate.getMonth(), currentDate.getDate());
+            const currentDateWeekday = currentDate.getDay();
+            const sameCalendarWeekday = sameCalendarDate.getDay();
+            
+            let daysToAdjust = currentDateWeekday - sameCalendarWeekday;
+            if (Math.abs(daysToAdjust) > 3) {
+              daysToAdjust = daysToAdjust > 0 ? daysToAdjust - 7 : daysToAdjust + 7;
+            }
+            
+            const method4Date = new Date(sameCalendarDate);
+            method4Date.setDate(method4Date.getDate() + daysToAdjust);
+
+            // Method 5: Same calendar date
+            const method5Date = new Date(lastYear, currentDate.getMonth(), currentDate.getDate());
+
+            return {
+              method1: method1Date,
+              method2: method2Date,
+              method3: method3Date,
+              method4: method4Date,
+              method5: method5Date
+            };
+          };
+
+          const comparisons = calculateComparisons(selectedDate);
+
+          const methods = [
+            {
+              id: 'method1',
+              title: 'Same Nth Weekday of Year',
+              description: (() => {
+                const nthWeekday = getNthWeekdayOfYear(selectedDate);
+                const weekdayName = selectedDate.toLocaleDateString('en-US', { weekday: 'long' });
+                
+                // Check if last year had enough occurrences
+                const lastYear = selectedDate.getFullYear() - 1;
+                const currentWeekday = selectedDate.getDay();
+                let lastYearCount = 0;
+                
+                for (let month = 0; month < 12; month++) {
+                  const daysInMonth = new Date(lastYear, month + 1, 0).getDate();
+                  for (let day = 1; day <= daysInMonth; day++) {
+                    const testDate = new Date(lastYear, month, day);
+                    if (testDate.getDay() === currentWeekday) {
+                      lastYearCount++;
+                    }
+                  }
+                }
+                
+                if (lastYearCount >= nthWeekday) {
+                  return `The ${nthWeekday}${getOrdinalSuffix(nthWeekday)} ${weekdayName} of last year`;
+                } else {
+                  return `The ${nthWeekday}${getOrdinalSuffix(nthWeekday)} ${weekdayName} of this year → Last ${weekdayName} of last year (only ${lastYearCount} occurred)`;
+                }
+              })(),
+              date: comparisons.method1,
+              useCase: 'Good for businesses with consistent weekly patterns throughout the year',
+              downsides: 'Can produce wildly different dates (early vs late in year). Complex to calculate and verify. May not exist in target year (53rd vs 52nd occurrence).'
+            },
+            {
+              id: 'method2',
+              title: 'Same Weekday of Same Week Number',
+              description: `${selectedDate.toLocaleDateString('en-US', { weekday: 'long' })} of week ${getWeekNumber(selectedDate)} of last year`,
+              date: comparisons.method2,
+              useCase: 'Useful for seasonal businesses or when week-of-year matters more than month',
+              downsides: 'Week numbering can be confusing (different standards exist). Can span across month boundaries unexpectedly. Not intuitive for most business users.'
+            },
+            {
+              id: 'method3',
+              title: 'Same Nth Weekday of Same Month',
+              description: (() => {
+                const nthWeekday = getNthWeekdayOfMonth(selectedDate);
+                const weekdayName = selectedDate.toLocaleDateString('en-US', { weekday: 'long' });
+                const monthName = selectedDate.toLocaleDateString('en-US', { month: 'long' });
+                
+                // Check if last year's same month had enough occurrences
+                const lastYear = selectedDate.getFullYear() - 1;
+                const currentWeekday = selectedDate.getDay();
+                const month = selectedDate.getMonth();
+                let lastYearMonthCount = 0;
+                
+                const daysInMonth = new Date(lastYear, month + 1, 0).getDate();
+                for (let day = 1; day <= daysInMonth; day++) {
+                  const testDate = new Date(lastYear, month, day);
+                  if (testDate.getDay() === currentWeekday) {
+                    lastYearMonthCount++;
+                  }
+                }
+                
+                if (lastYearMonthCount >= nthWeekday) {
+                  return `The ${nthWeekday}${getOrdinalSuffix(nthWeekday)} ${weekdayName} of ${monthName} last year`;
+                } else {
+                  return `The ${nthWeekday}${getOrdinalSuffix(nthWeekday)} ${weekdayName} of ${monthName} last year (doesn't exist - only ${lastYearMonthCount} ${weekdayName}s in ${monthName} ${lastYear})`;
+                }
+              })(),
+              date: comparisons.method3,
+              useCase: 'Perfect for monthly recurring events or strong monthly seasonality',
+              downsides: 'Frequently produces "No Answer" (5th weekday often doesn\'t exist). Inconsistent comparison periods. Hard to predict which dates will work.'
+            },
+            {
+              id: 'method4',
+              title: 'Same Weekday, Closest Date',
+              description: 'Closest same weekday to the same calendar date last year',
+              date: comparisons.method4,
+              useCase: 'Balances calendar date with weekday effects (most flexible approach)',
+              downsides: 'Can shift up to 3 days from the actual anniversary date. Logic is complex to explain to stakeholders. "Closest" can be ambiguous at boundaries.'
+            },
+            {
+              id: 'method5',
+              title: 'Same Calendar Date',
+              description: 'Exact same month and day as last year (most common in business)',
+              date: comparisons.method5,
+              useCase: 'Standard for seasonal analysis and calendar-driven business cycles',
+              downsides: 'Ignores weekday effects entirely (Monday vs Friday can matter a lot). Holidays may shift the context significantly.'
+            }
+          ];
+
+          function getOrdinalSuffix(num) {
+            const j = num % 10;
+            const k = num % 100;
+            if (j === 1 && k !== 11) return 'st';
+            if (j === 2 && k !== 12) return 'nd';
+            if (j === 3 && k !== 13) return 'rd';
+            return 'th';
+          }
+
+          return React.createElement('div', { className: "max-w-6xl mx-auto p-6 bg-gray-50 min-h-screen" },
+            React.createElement('div', { className: "bg-white rounded-lg shadow-lg p-6 mb-6" },
+              React.createElement('h1', { className: "text-3xl font-bold text-gray-800 mb-4 flex items-center gap-3" },
+                React.createElement(Calendar),
+                "Date Comparison Methods Demo"
+              ),
+              
+              React.createElement('div', { className: "bg-blue-50 border-l-4 border-blue-400 p-4 mb-6" },
+                React.createElement('div', { className: "flex items-start gap-2" },
+                  React.createElement(Info),
+                  React.createElement('div', null,
+                    React.createElement('p', { className: "text-blue-800 font-medium" }, "How it works:"),
+                    React.createElement('p', { className: "text-blue-700" }, "Select any date below to see how each comparison method would find the corresponding date from last year. This helps you understand which approach best fits your business needs.")
+                  )
+                )
+              ),
+
+              React.createElement('div', { className: "mb-6" },
+                React.createElement('label', { className: "block text-sm font-medium text-gray-700 mb-2" },
+                  "Select Reference Date:"
+                ),
+                React.createElement('input', {
+                  type: "date",
+                  value: selectedDate.toISOString().split('T')[0],
+                  onChange: (e) => {
+                    const [year, month, day] = e.target.value.split('-').map(Number);
+                    setSelectedDate(new Date(year, month - 1, day));
+                  },
+                  className: "border border-gray-300 rounded-md px-3 py-2 text-lg"
+                })
+              ),
+
+              React.createElement('div', { className: "bg-gray-100 rounded-lg p-4 mb-6" },
+                React.createElement('h2', { className: "text-xl font-semibold text-gray-800 mb-2" }, "Reference Date:"),
+                React.createElement('p', { className: "text-lg font-medium text-blue-600" }, formatDate(selectedDate))
+              ),
+
+              React.createElement('div', { className: "text-center text-sm text-gray-500 mb-4" },
+                "Created with Claude AI by Anthropic"
+              )
+            ),
+
+            React.createElement('div', { className: "grid gap-4" },
+              methods.map((method) =>
+                React.createElement('div', { key: method.id, className: "bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500" },
+                  React.createElement('div', { className: "flex items-center justify-between mb-4" },
+                    React.createElement('h3', { className: "text-xl font-semibold text-gray-800" }, method.title),
+                  ),
+                  
+                  React.createElement('div', { className: "grid md:grid-cols-2 gap-4 mb-4" },
+                    React.createElement('div', null,
+                      React.createElement('p', { className: "text-sm text-gray-600 mb-2" }, "Method:"),
+                      React.createElement('p', { className: "font-medium text-gray-800" }, method.description)
+                    ),
+                    React.createElement('div', null,
+                      React.createElement('p', { className: "text-sm text-gray-600 mb-2" }, "Comparison Date:"),
+                      React.createElement('p', { className: "text-lg font-semibold text-green-600" },
+                        method.date ? formatDate(method.date) : 'Not available'
+                      )
+                    )
+                  ),
+                  
+                  React.createElement('div', { className: "bg-gray-50 rounded-md p-3 mb-3" },
+                    React.createElement('p', { className: "text-sm text-gray-600 mb-1" }, "Best for:"),
+                    React.createElement('p', { className: "text-sm text-gray-800" }, method.useCase)
+                  ),
+                  
+                  React.createElement('div', { className: "bg-red-50 rounded-md p-3" },
+                    React.createElement('p', { className: "text-sm text-red-600 mb-1" }, "Potential downsides:"),
+                    React.createElement('p', { className: "text-sm text-red-800" }, method.downsides)
+                  )
+                )
+              )
+            ),
+
+            React.createElement('div', { className: "mt-8 bg-white rounded-lg shadow-lg p-6" },
+              React.createElement('h2', { className: "text-2xl font-bold text-gray-800 mb-4" }, "Key Differences Summary"),
+              React.createElement('div', { className: "grid md:grid-cols-2 gap-6" },
+                React.createElement('div', null,
+                  React.createElement('h3', { className: "font-semibold text-gray-800 mb-2" }, "Date-Based Methods:"),
+                  React.createElement('ul', { className: "space-y-1 text-sm text-gray-600" },
+                    React.createElement('li', null, "• ", React.createElement('strong', null, "Same Calendar Date:"), " Most predictable, standard business practice"),
+                    React.createElement('li', null, "• ", React.createElement('strong', null, "Closest Same Weekday:"), " Balances date consistency with weekday effects")
+                  )
+                ),
+                React.createElement('div', null,
+                  React.createElement('h3', { className: "font-semibold text-gray-800 mb-2" }, "Pattern-Based Methods:"),
+                  React.createElement('ul', { className: "space-y-1 text-sm text-gray-600" },
+                    React.createElement('li', null, "• ", React.createElement('strong', null, "Nth Weekday (Year):"), " Consistent weekly patterns across seasons"),
+                    React.createElement('li', null, "• ", React.createElement('strong', null, "Nth Weekday (Month):"), " Monthly recurring events"),
+                    React.createElement('li', null, "• ", React.createElement('strong', null, "Same Week Number:"), " Week-of-year seasonality")
+                  )
+                )
+              ),
+              React.createElement('div', { className: "mt-4 p-4 bg-yellow-50 rounded-md" },
+                React.createElement('p', { className: "text-sm text-yellow-800" },
+                  React.createElement('strong', null, "Recommendation:"), " For most businesses, \"Same Calendar Date\" or \"Closest Same Weekday\" work best. The pattern-based methods are useful for businesses with very specific weekly or monthly cycles."
+                )
+              )
+            )
+          );
+        };
+
+        ReactDOM.render(React.createElement(DateComparisonDemo), document.getElementById('root'));
+    </script>
+</body>
+</html>
